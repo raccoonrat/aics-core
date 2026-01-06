@@ -10,11 +10,14 @@ static policy_config_t* create_policy_obj(int version, double strict) {
     p->version = version;
     p->threshold_strict = strict;
     
-    // 默认全开
     p->check_input_l0 = true;
     p->check_input_l2 = true;
     p->check_output_l0 = true;
     p->check_output_l2 = true;
+
+    /* 默认开启长文本优化 */
+    p->enable_anchor_scan = true;
+    p->anchor_window_size = 1000; // 对应报告建议: Head(1000) + Tail(1000)
     
     atomic_init(&p->ref_count, 1);
     return p;
@@ -23,7 +26,7 @@ static policy_config_t* create_policy_obj(int version, double strict) {
 void policy_init(void) {
     policy_config_t *p = create_policy_obj(1, 0.90);
     atomic_store(&GlobalPolicy, p);
-    printf("[Init] Policy System Ready (v1)\n");
+    printf("[Init] Policy System Ready (v1) with Anchor Scanning\n");
 }
 
 policy_config_t* policy_acquire(void) {
@@ -38,7 +41,6 @@ policy_config_t* policy_acquire(void) {
 void policy_release(policy_config_t *p) {
     if (!p) return;
     if (atomic_fetch_sub(&p->ref_count, 1) == 1) {
-        // printf("[GC] Freeing Policy v%d\n", p->version);
         free(p);
     }
 }
